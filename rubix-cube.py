@@ -1,66 +1,94 @@
 from ursina import *
-from ursina.prefabs.first_person_controller import FirstPersonController
-import random
 
 app = Ursina()
 
-# Config
 cube_size = 0.95
 gap = 0.05
-
-# Create a 3x3x3 grid of cubes
 cubies = []
+
+face_colors = {
+    'front': color.red,
+    'back': color.orange,
+    'left': color.blue,
+    'right': color.green,
+    'top': color.white,
+    'bottom': color.yellow
+}
 
 class Cubie(Entity):
     def __init__(self, position):
         super().__init__(
             model='cube',
-            color=color.white,
+            color=color.black,               # darker body to contrast stickers
             position=position,
-            scale=Vec3(cube_size, cube_size, cube_size),
-            collider='box'
+            scale=Vec3(cube_size, cube_size, cube_size)
         )
+        self.add_stickers()
+
+    def add_stickers(self):
+        offset = (cube_size / 2) + 0.01
+        th = 0.06                          # sticker thickness
+        sz = cube_size * 0.9              # sticker height/width
+
+        x, y, z = self.position
+
+        # right face
+        if x > 0.9:
+            Entity(parent=self,
+                   model='cube',
+                   color=face_colors['right'],
+                   scale=(th, sz, sz),
+                   position=( offset, 0,    0   ))
+        # left face
+        if x < -0.9:
+            Entity(parent=self,
+                   model='cube',
+                   color=face_colors['left'],
+                   scale=(th, sz, sz),
+                   position=(-offset, 0,    0   ))
+        # top face
+        if y > 0.9:
+            Entity(parent=self,
+                   model='cube',
+                   color=face_colors['top'],
+                   scale=(sz, th, sz),
+                   position=(0,    offset, 0   ))
+        # bottom face
+        if y < -0.9:
+            Entity(parent=self,
+                   model='cube',
+                   color=face_colors['bottom'],
+                   scale=(sz, th, sz),
+                   position=(0,   -offset, 0   ))
+        # front face
+        if z > 0.9:
+            Entity(parent=self,
+                   model='cube',
+                   color=face_colors['front'],
+                   scale=(sz, sz, th),
+                   position=(0,    0,    offset))
+        # back face
+        if z < -0.9:
+            Entity(parent=self,
+                   model='cube',
+                   color=face_colors['back'],
+                   scale=(sz, sz, th),
+                   position=(0,    0,   -offset))
 
 def make_cube():
     for x in range(3):
         for y in range(3):
             for z in range(3):
                 pos = Vec3(x - 1, y - 1, z - 1) * (cube_size + gap)
-                cubie = Cubie(pos)
-                cubies.append(cubie)
+                cubies.append(Cubie(pos))
 
 make_cube()
 
-# Mouse controls
-selected_axis = 'y'
-rotation_angle = 0
-is_rotating = False
-layer = []
+# camera + light
+EditorCamera()
+DirectionalLight()
 
-def input(key):
-    global selected_axis, is_rotating, rotation_angle, layer
+camera.position = (0, 0, -10)
+camera.look_at(Vec3(0, 0, 0))
 
-    if is_rotating:
-        return
-
-    if key == 'left mouse down':
-        hit_info = mouse.hovered_entity
-        if hit_info:
-            layer = [c for c in cubies if abs(c.world_position.y - hit_info.world_position.y) < 0.1]
-            is_rotating = True
-            rotation_angle = 0
-
-def update():
-    global rotation_angle, is_rotating
-
-    if is_rotating:
-        angle_step = 5
-        for c in layer:
-            c.rotation_y += angle_step
-        rotation_angle += angle_step
-        if rotation_angle >= 90:
-            is_rotating = False
-            rotation_angle = 0
-
-EditorCamera()  # Allows orbiting with right-click drag
 app.run()
